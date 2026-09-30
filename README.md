@@ -1,8 +1,8 @@
-# wine-mozart — plain-Wine runner for audio production
+# wine-mozart — The Official Wine Runner for mozart.sh
 
-A standalone **Wine 11.0** runner designed for music production software on Linux.
+**wine-mozart** is the official Wine runner of the **mozart.sh** project, which aims to make music production on Linux simple, reliable, and accessible.
 
-`wine-mozart` builds on top of giang17's Wine repository directly, fetches the base patch series from [HeapHeapHooray/wine-d2d1-msi](https://github.com/HeapHeapHooray/wine-d2d1-msi) in real time, applies them, and layers custom patches from this repository.
+Engineered specifically for pro-audio workloads, digital audio workstations (DAWs), VST/VST3/CLAP plugins, and proprietary audio software installers, `wine-mozart` builds on top of `giang17/wine` with Direct2D 1.3 / DirectComposition support, dynamically integrates real-time patches from [HeapHeapHooray/wine-d2d1-msi](https://github.com/HeapHeapHooray/wine-d2d1-msi), and layers custom Mozart-specific optimizations to deliver an out-of-the-box Windows audio environment on Linux.
 
 ---
 
@@ -62,7 +62,7 @@ To add custom patches to `wine-mozart`:
 
 Once built, the archive is located at `dist/wine-mozart-11.0-x86_64.tar.xz`.
 
-### cheapwine
+### mozart.sh / cheapwine
 ```bash
 tar -xJf dist/wine-mozart-11.0-x86_64.tar.xz -C ~/.local/share/cheapwine/runners/
 ```
