@@ -15,15 +15,7 @@ A standalone **Wine 11.0** runner designed for music production software on Linu
    The base Wine repository (`GIANG17_REPO`) and pinned commit (`GIANG17_COMMIT`) are configured directly in `wine-mozart`'s `build.sh` (defaulting to giang17's Wine `d2d1-dcomp-11.0` @ `46c43a2db62ceeac1b33b31bccdebda65ef7f770`).
 
 3. **Base Patch Application**:
-   Applies the base patches from `wine-d2d1-msi` in numerical order:
-   - `0007-msi-rewrite-all-tables-on-long-strref.mypatch` — Wine MSI string-table corruption fix (Option A, Native Instruments InstallAware installers).
-   - `0008-wined3d-only-map-host-visible-bo.mypatch` — wined3d Vulkan host-visible buffer mapping fix for Kontakt 8 D3D backend.
-   - `0009-mscoree-implement-CLRRuntimeInfo_GetProcAddress-and-IManagedInstaller.mypatch` — VS/WiX managed installer Custom Actions (`IManagedInstaller`).
-   - `0010-wbemprox-implement-Win32_Service-Create-and-fix-wmic.mypatch` — `wbemprox` implementation of `Win32_Service.Create` and `wmic.exe` formatting.
-   - `0011-wminet_utils-implement-COM-delegate-forwarding-and-_f-exports.mypatch` — `wminet_utils.dll` COM forwarding and `_f` export aliases for Mono `System.Management.dll`.
-   - `0012-opengl-support-child-window-and-egl-pfd-draw-to-window.mypatch` — OpenGL child window context creation, EGL `PFD_DRAW_TO_WINDOW` flags, and cursor handling.
-   - `0013-configure-fallback-soname-libgl-and-libegl.mypatch` — Linux runtime fallback for `SONAME_LIBGL` and `SONAME_LIBEGL`.
-   - `0014-crypt32-preserve-pkcs-attributes-order.mypatch` — Preserves input attribute order in `CRYPT_AsnEncodePKCSAttributes` for FL Studio Authenticode verification.
+   Discovers and applies all base patches (`*.mypatch` and `*.patch`) dynamically fetched from `wine-d2d1-msi` in natural version order (`sort -V`).
 
 4. **Custom Mozart Patch Application**:
    Applies any custom patches found in `patches/*.mypatch` or `patches/*.patch` in natural version order (`sort -V`).
@@ -60,7 +52,7 @@ To add custom patches to `wine-mozart`:
 
 1. Drop your `.mypatch` or `.patch` file into the `patches/` folder:
    ```bash
-   cp my-fix.patch patches/0015-my-fix.mypatch
+   cp my-fix.patch patches/my-fix.mypatch
    ```
 2. Run `./build.sh` (or `./build.sh --prepare` to test patch application).
 
