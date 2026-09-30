@@ -78,21 +78,29 @@ To add custom patches to `wine-mozart`:
 
 ---
 
-## Installing the Runner
+## Installing & Using the Runner
 
-Once built, the archive is located at `dist/wine-mozart-11.0-x86_64.tar.xz`.
+### Automatic Installation via cheapwine (Recommended)
 
-### mozart.sh / cheapwine
+`cheapwine` natively supports automatic downloading and installation of `wine-mozart` releases:
+
+```bash
+cheapwine init --runner "wine-mozart"
+```
+
+Running this command will automatically fetch, download, and unpack the latest `wine-mozart` release into your local runners directory without requiring manual downloads.
+
+### Manual Installation (Local Builds or Releases)
+
+If you are using a local build (`dist/wine-mozart-11.0-x86_64.tar.xz`) or manual release archive:
+
+#### mozart.sh / cheapwine
 ```bash
 tar -xJf dist/wine-mozart-11.0-x86_64.tar.xz -C ~/.local/share/cheapwine/runners/
+cheapwine init --runner "wine-mozart"
 ```
 
-Initialize a prefix using the runner:
-```bash
-cheapwine init --runner="wine-mozart-11.0"
-```
-
-### Bottles
+#### Bottles
 ```bash
 tar -xJf dist/wine-mozart-11.0-x86_64.tar.xz -C ~/.local/share/bottles/runners/
 ```
