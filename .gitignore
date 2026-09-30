@@ -1,0 +1,13 @@
+# Build working directory and stage
+.work/
+
+# Distribution packages
+dist/
+*.tar.xz
+*.tar.gz
+
+# Compiled binaries and logs
+*.log
+*.exe
+*.dll
+*.so

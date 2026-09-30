@@ -1,0 +1,43 @@
+name: build-wine-mozart
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  PKG_BASENAME: 'wine-mozart'
+  WINE_VERSION: '11.0'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # create the release tag + upload the runner asset
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Wine build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential ccache mingw-w64 bison flex autoconf perl gettext \
+            libfreetype-dev libfontconfig-dev libpng-dev libjpeg-dev \
+            libgif-dev libgnutls28-dev libasound2-dev libpulse-dev \
+            libxcomposite-dev libxcursor-dev libxrandr-dev libxi-dev \
+            libxinerama-dev libvulkan-dev libgl-dev libegl-dev
+
+      - name: Build wine-mozart runner
+        run: |
+          chmod +x build.sh
+          INSTALL_DEPS=no ./build.sh
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "${{ github.ref_type == 'tag' && github.ref_name || format('{0}-{1}', env.PKG_BASENAME, env.WINE_VERSION) }}"
+          name: "wine-mozart ${{ github.ref_name }}"
+          draft: false
+          prerelease: false
+          files: "dist/${{ env.PKG_BASENAME }}-${{ env.WINE_VERSION }}-x86_64.tar.xz"
