@@ -8,6 +8,9 @@ Engineered specifically for pro-audio workloads, digital audio workstations (DAW
 
 ## Compatible Software, DAWs & Instruments
 
+> [!IMPORTANT]
+> Fully-working software is only guaranteed by using this runner with the installers of the **mozart.sh** project.
+
 `wine-mozart` resolves Wine engine regressions, Direct2D/DirectComposition GUI rendering bottlenecks, Authenticode signature checks, and MSI string-pool corruption to make demanding audio production software run effortlessly on Linux:
 
 - **DAWs & Hosts**:
