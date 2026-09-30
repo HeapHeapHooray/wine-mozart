@@ -94,7 +94,7 @@ Running this command will automatically fetch, download, and unpack the latest `
 
 If you are using a local build (`dist/wine-mozart-11.0-x86_64.tar.xz`) or manual release archive:
 
-#### mozart.sh / cheapwine
+#### cheapwine
 ```bash
 tar -xJf dist/wine-mozart-11.0-x86_64.tar.xz -C ~/.local/share/cheapwine/runners/
 cheapwine init --runner "wine-mozart"
