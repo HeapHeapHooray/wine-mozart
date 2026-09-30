@@ -10,12 +10,39 @@ env:
   WINE_VERSION: '11.0'
 
 jobs:
-  build:
-    name: 🍷 Build & Release wine-mozart
+  # =========================================================================
+  # Stage 1: 🧩 Prepare Source & Patches
+  # =========================================================================
+  prepare:
+    name: 🧩 Prepare Source & Patches
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
 
+      - name: 🧩 Clone patches & prepare Wine tree
+        run: |
+          chmod +x build.sh
+          ./build.sh --prepare
+
+      - name: 📦 Compress prepared source
+        run: |
+          tar -czf /tmp/wine-source.tar.gz -C .work wine
+
+      - name: 📤 Upload prepared source artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-prepared-source
+          path: /tmp/wine-source.tar.gz
+          retention-days: 1
+
+  # =========================================================================
+  # Stage 2: 🔨 Build Wine Runner
+  # =========================================================================
+  build:
+    name: 🔨 Build Wine Runner
+    needs: prepare
+    runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
@@ -30,16 +57,25 @@ jobs:
             libxcomposite-dev libxcursor-dev libxrandr-dev libxi-dev \
             libxinerama-dev libvulkan-dev libgl-dev libegl-dev
 
-      - name: 🧩 Fetch base patches (wine-d2d1-msi)
+      - name: ⚡ Restore CCache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-
+
+      - name: 📥 Download prepared source artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: wine-prepared-source
+          path: /tmp
+
+      - name: 📂 Extract prepared source
         run: |
+          mkdir -p .work
+          tar -xzf /tmp/wine-source.tar.gz -C .work
           chmod +x build.sh
-          ./build.sh --fetch-patches
-
-      - name: 🍷 Fetch base Wine (giang17)
-        run: ./build.sh --fetch-wine
-
-      - name: 🩹 Apply base & custom patches
-        run: ./build.sh --apply-patches
 
       - name: ⚙️ Configure Wine (WoW64)
         run: ./build.sh --configure
@@ -47,8 +83,69 @@ jobs:
       - name: 🔨 Compile Wine runner
         run: ./build.sh --build
 
-      - name: 📦 Package runner archive
+      - name: 📦 Stage installed runner
+        run: |
+          make -C .work/build DESTDIR="$PWD/.work/stage" install
+          tar -czf /tmp/wine-stage.tar.gz -C .work/stage opt
+
+      - name: 📤 Upload staged runner artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-stage
+          path: /tmp/wine-stage.tar.gz
+          retention-days: 1
+
+      - name: 📊 CCache stats
+        run: ccache -s
+
+  # =========================================================================
+  # Stage 3: 📦 Package Runner Archive
+  # =========================================================================
+  package:
+    name: 📦 Package Runner Archive
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 📥 Download staged runner artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: wine-stage
+          path: /tmp
+
+      - name: 📂 Extract staged runner
+        run: |
+          mkdir -p .work/stage
+          tar -xzf /tmp/wine-stage.tar.gz -C .work/stage
+          chmod +x build.sh
+
+      - name: 📦 Create distribution archive & checksum
         run: ./build.sh --package
+
+      - name: 📤 Upload distribution package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-mozart-release-package
+          path: dist/
+          retention-days: 7
+
+  # =========================================================================
+  # Stage 4: 🚀 Publish GitHub Release
+  # =========================================================================
+  release:
+    name: 🚀 Publish GitHub Release
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 📥 Download distribution package artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: wine-mozart-release-package
+          path: dist
 
       - name: 🚀 Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -57,4 +154,6 @@ jobs:
           name: "${{ github.ref_type == 'tag' && format('wine-mozart {0}', github.ref_name) || format('wine-mozart {0}-{1}', env.PKG_BASENAME, env.WINE_VERSION) }}"
           draft: false
           prerelease: false
-          files: "dist/${{ env.PKG_BASENAME }}-${{ env.WINE_VERSION }}-x86_64.tar.xz"
+          files: |
+            dist/${{ env.PKG_BASENAME }}-${{ env.WINE_VERSION }}-x86_64.tar.xz
+            dist/${{ env.PKG_BASENAME }}-${{ env.WINE_VERSION }}-x86_64.tar.xz.sha256

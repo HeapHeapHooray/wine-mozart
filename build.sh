@@ -320,15 +320,21 @@ step_package() {
     echo "========================================================================"
     echo " 📦 Staging and packaging the runner"
     echo "========================================================================"
-    if [ ! -f "$BUILD/Makefile" ]; then
-        echo "ERROR: Build directory not configured or built. Run build first." >&2
-        exit 1
-    fi
     STAGE="$WORKDIR/stage"
-    rm -rf "$STAGE"
-    make -C "$BUILD" DESTDIR="$STAGE" install
-
     RUNNER_DIR="$WORKDIR/${PKG_BASENAME}-x86_64"
+
+    if [ ! -d "$STAGE/opt/$PKG_BASENAME" ]; then
+        if [ ! -f "$BUILD/Makefile" ]; then
+            echo "ERROR: Neither pre-staged directory nor build directory found." >&2
+            echo "Run build first or provide $STAGE/opt/$PKG_BASENAME." >&2
+            exit 1
+        fi
+        rm -rf "$STAGE"
+        make -C "$BUILD" DESTDIR="$STAGE" install
+    else
+        echo "Using existing staged runner in $STAGE/opt/$PKG_BASENAME"
+    fi
+
     rm -rf "$RUNNER_DIR"
     mkdir -p "$RUNNER_DIR"
     cp -a "$STAGE/opt/$PKG_BASENAME/." "$RUNNER_DIR/"
@@ -338,6 +344,7 @@ step_package() {
     ARCHIVE_PATH="$DIST/${PKG_BASENAME}-x86_64.tar.xz"
     echo "Creating archive $ARCHIVE_PATH..."
     tar cJvf "$ARCHIVE_PATH" -C "$WORKDIR" "${PKG_BASENAME}-x86_64"
+    sha256sum "$ARCHIVE_PATH" > "${ARCHIVE_PATH}.sha256"
 
     echo ""
     echo "========================================================================"
