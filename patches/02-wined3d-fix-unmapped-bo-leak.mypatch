@@ -1,0 +1,71 @@
+From: Antigravity <antigravity@google.com>
+Subject: [PATCH] wined3d: Prevent leaking unmapped buffer objects in Vulkan backend
+
+When UpdateSubresource or DISCARD map is called on non-mappable/default buffers,
+wined3d_cs_map_upload_bo invoked adapter_alloc_bo. In Vulkan, adapter_vk_alloc_bo
+allocated a device-local (non-host-visible) buffer object which could not be mapped.
+Because the BO was unmapped, wined3d_cs_map_upload_bo returned false, but the newly
+allocated BO was never destroyed.
+
+During UI rendering loops (such as in Soundpaint V), this caused thousands of BOs
+to be allocated and leaked per second, exhausting 8 GB of VRAM and 7.5 GB of system
+GTT RAM in seconds and freezing the host system.
+
+Fix this by:
+1. Returning false early in adapter_vk_alloc_bo and wined3d_cs_map_upload_bo if
+   the buffer resource is not CPU-mappable or dynamic.
+2. In adapter_vk_alloc_bo, destroying the allocated BO and returning false if
+   mapping fails or bo_vk->b.map_ptr is NULL, preventing unmapped BO leaks.
+---
+ dlls/wined3d/adapter_vk.c | 10 ++++++++++
+ dlls/wined3d/cs.c         |  7 +++++++
+ 2 files changed, 17 insertions(+)
+
+diff --git a/dlls/wined3d/adapter_vk.c b/dlls/wined3d/adapter_vk.c
+index 86512b191a0..4f9e91131d7 100644
+--- a/dlls/wined3d/adapter_vk.c
++++ b/dlls/wined3d/adapter_vk.c
+@@ -1197,6 +1197,10 @@ static bool adapter_vk_alloc_bo(struct wined3d_device *device, struct wined3d_re
+ 
+     if (resource->type == WINED3D_RTYPE_BUFFER)
+     {
++        if (!(resource->access & (WINED3D_RESOURCE_ACCESS_MAP_R | WINED3D_RESOURCE_ACCESS_MAP_W))
++                && !(resource->usage & WINED3DUSAGE_DYNAMIC))
++            return false;
++
+         buffer_usage = vk_buffer_usage_from_bind_flags(resource->bind_flags);
+         memory_type = vk_memory_type_from_access_flags(resource->access, resource->usage);
+         size = resource->size;
+@@ -1227,6 +1231,12 @@ static bool adapter_vk_alloc_bo(struct wined3d_device *device, struct wined3d_re
+             ERR("Failed to map bo.\n");
+     }
+ 
++    if (!bo_vk->b.map_ptr)
++    {
++        wined3d_context_vk_destroy_bo(context_vk, bo_vk);
++        return false;
++    }
++
+     addr->buffer_object = &bo_vk->b;
+     addr->addr = NULL;
+     return true;
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 72fe9a2440d..d7d1ab02dad 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -3228,6 +3228,13 @@ static bool wined3d_cs_map_upload_bo(struct wined3d_device_context *context, str
+             return false;
+         }
+ 
++        if (resource->type == WINED3D_RTYPE_BUFFER
++                && !(resource->access & (WINED3D_RESOURCE_ACCESS_MAP_R | WINED3D_RESOURCE_ACCESS_MAP_W))
++                && !(resource->usage & WINED3DUSAGE_DYNAMIC))
++        {
++            return false;
++        }
++
+         if ((flags & WINED3D_MAP_NOOVERWRITE) && client->addr.buffer_object == CLIENT_BO_DISCARDED)
+             flags = (flags & ~WINED3D_MAP_NOOVERWRITE) | WINED3D_MAP_DISCARD;
+ 
+-- 
+2.43.0

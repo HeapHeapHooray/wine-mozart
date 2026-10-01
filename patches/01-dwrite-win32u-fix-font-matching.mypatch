@@ -1,0 +1,179 @@
+From: Antigravity <antigravity@google.com>
+Subject: [PATCH] dwrite, win32u: Normalize font paths and match local font files case-insensitively
+
+JUCE 8 (used by Soundpaint V and other audio plugins/apps) retrieves font
+faces via IDWriteGdiInterop::CreateFontFaceFromHdc and subsequently queries
+the system font collection via IDWriteFontCollection::GetFontFromFontFace.
+
+In Wine, win32u (NtGdiGetFontFileInfo) returns internal NT font paths
+prefixed with '\??\' (e.g. \??\C:\windows\fonts\arial.ttf). When passed to
+IDWriteFactory::CreateFontFileReference, this creates a local_refkey containing
+the NT prefix. However, fonts registered in the system font collection have DOS
+paths (e.g. C:\windows\fonts\arial.ttf).
+
+Additionally, is_same_fontfile performed exact binary key comparison, failing
+when paths had different prefixes or case differences. When font lookup fails,
+JUCE returns an empty glyph layout vector, causing Soundpaint V to crash with a
+null pointer dereference.
+
+Fix this by:
+1. Stripping '\??\' and '\\?\' prefixes in NtGdiGetFontFileInfo,
+   gdiinterop_CreateFontFaceFromHdc, and get_local_refkey.
+2. In is_same_fontfile, if both loaders are the local font file loader,
+   comparing the file paths case-insensitively while ignoring prefix differences.
+---
+ dlls/dwrite/dwrite_private.h |  6 ++++++
+ dlls/dwrite/font.c          | 48 +++++++++++++++++++++++++++++++++++++++-----
+ dlls/dwrite/gdiinterop.c    |  9 +++++++--
+ dlls/win32u/font.c          |  8 ++++++--
+ 4 files changed, 62 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/dwrite/dwrite_private.h b/dlls/dwrite/dwrite_private.h
+index 530738f4a97..6b844682de5 100644
+--- a/dlls/dwrite/dwrite_private.h
++++ b/dlls/dwrite/dwrite_private.h
+@@ -390,6 +390,12 @@ extern HRESULT create_fontface(const struct fontface_desc *desc, struct list *ca
+ extern HRESULT create_font_collection(IDWriteFactory7 *factory, IDWriteFontFileEnumerator *enumerator,
+         IDWriteFontCollection3 **collection);
+ extern HRESULT create_glyphrunanalysis(const struct glyphrunanalysis_desc*,IDWriteGlyphRunAnalysis**);
++struct local_refkey
++{
++    FILETIME writetime;
++    WCHAR name[1];
++};
++
+ extern HRESULT get_local_refkey(const WCHAR*,const FILETIME*,void**,UINT32*);
+ extern HRESULT get_filestream_from_file(IDWriteFontFile*,IDWriteFontFileStream**);
+ extern BOOL    is_face_type_supported(DWRITE_FONT_FACE_TYPE);
+diff --git a/dlls/dwrite/font.c b/dlls/dwrite/font.c
+index 804b25a2f75..38aadaa33fb 100644
+--- a/dlls/dwrite/font.c
++++ b/dlls/dwrite/font.c
+@@ -790,6 +790,7 @@ static BOOL is_same_fontfile(IDWriteFontFile *left, IDWriteFontFile *right)
+ {
+     UINT32 left_key_size, right_key_size;
+     const void *left_key, *right_key;
++    IDWriteFontFileLoader *left_loader = NULL, *right_loader = NULL;
+     HRESULT hr;
+ 
+     if (left == right)
+@@ -803,6 +804,44 @@ static BOOL is_same_fontfile(IDWriteFontFile *left, IDWriteFontFile *right)
+     if (FAILED(hr))
+         return FALSE;
+ 
++    hr = IDWriteFontFile_GetLoader(left, &left_loader);
++    if (SUCCEEDED(hr))
++    {
++        hr = IDWriteFontFile_GetLoader(right, &right_loader);
++        if (FAILED(hr))
++        {
++            IDWriteFontFileLoader_Release(left_loader);
++            return FALSE;
++        }
++
++        if (left_loader != right_loader)
++        {
++            IDWriteFontFileLoader_Release(left_loader);
++            IDWriteFontFileLoader_Release(right_loader);
++            return FALSE;
++        }
++
++        if (left_loader == get_local_fontfile_loader())
++        {
++            const struct local_refkey *left_ref = left_key, *right_ref = right_key;
++            const WCHAR *left_name = left_ref->name, *right_name = right_ref->name;
++
++            IDWriteFontFileLoader_Release(left_loader);
++            IDWriteFontFileLoader_Release(right_loader);
++
++            if (!wcsncmp(left_name, L"\\??\\", 4)) left_name += 4;
++            else if (!wcsncmp(left_name, L"\\\\?\\", 4)) left_name += 4;
++
++            if (!wcsncmp(right_name, L"\\??\\", 4)) right_name += 4;
++            else if (!wcsncmp(right_name, L"\\\\?\\", 4)) right_name += 4;
++
++            return !wcsicmp(left_name, right_name);
++        }
++
++        IDWriteFontFileLoader_Release(left_loader);
++        IDWriteFontFileLoader_Release(right_loader);
++    }
++
+     if (left_key_size != right_key_size)
+         return FALSE;
+ 
+@@ -5316,12 +5355,6 @@ HRESULT create_fontface(const struct fontface_desc *desc, struct list *cached_li
+ }
+ 
+ /* IDWriteLocalFontFileLoader and its required IDWriteFontFileStream */
+-struct local_refkey
+-{
+-    FILETIME writetime;
+-    WCHAR name[1];
+-};
+-
+ struct local_cached_stream
+ {
+     struct list entry;
+@@ -5759,6 +5792,9 @@ HRESULT get_local_refkey(const WCHAR *path, const FILETIME *writetime, void **ke
+     if (!path)
+         return E_INVALIDARG;
+ 
++    if (!wcsncmp(path, L"\\??\\", 4)) path += 4;
++    else if (!wcsncmp(path, L"\\\\?\\", 4)) path += 4;
++
+     if (!writetime)
+     {
+         if (!GetFileAttributesExW(path, GetFileExInfoStandard, &info))
+diff --git a/dlls/dwrite/gdiinterop.c b/dlls/dwrite/gdiinterop.c
+index 7f4b7f7689b..7cdd9887670 100644
+--- a/dlls/dwrite/gdiinterop.c
++++ b/dlls/dwrite/gdiinterop.c
+@@ -769,6 +769,7 @@ static HRESULT WINAPI gdiinterop_CreateFontFaceFromHdc(IDWriteGdiInterop1 *iface
+     struct font_fileinfo *fileinfo;
+     DWRITE_FONT_FILE_TYPE filetype;
+     DWRITE_FONT_FACE_TYPE facetype;
++    const WCHAR *path;
+     IDWriteFontFile *file;
+     BOOL is_supported;
+     UINT32 facenum;
+@@ -805,8 +806,12 @@ static HRESULT WINAPI gdiinterop_CreateFontFaceFromHdc(IDWriteGdiInterop1 *iface
+         return E_FAIL;
+     }
+ 
+-    if (*fileinfo->path)
+-        hr = IDWriteFactory7_CreateFontFileReference(interop->factory, fileinfo->path, &fileinfo->writetime, &file);
++    path = fileinfo->path;
++    if (!wcsncmp(path, L"\\??\\", 4)) path += 4;
++    else if (!wcsncmp(path, L"\\\\?\\", 4)) path += 4;
++
++    if (*path)
++        hr = IDWriteFactory7_CreateFontFileReference(interop->factory, path, &fileinfo->writetime, &file);
+     else
+         hr = IDWriteFactory7_CreateCustomFontFileReference(interop->factory, &info.instance_id,
+                 sizeof(info.instance_id), &interop->IDWriteFontFileLoader_iface, &file);
+diff --git a/dlls/win32u/font.c b/dlls/win32u/font.c
+index ed2ef5200b2..83c708367c8 100644
+--- a/dlls/win32u/font.c
++++ b/dlls/win32u/font.c
+@@ -6977,12 +6977,16 @@ BOOL WINAPI NtGdiGetFontFileInfo( DWORD instance_id, DWORD file_index, struct fo
+ 
+     if ((font = get_font_from_handle( instance_id )))
+     {
+-        required_size = sizeof(*info) + lstrlenW( font->file ) * sizeof(WCHAR);
++        const WCHAR *file = font->file;
++        if (file[0] == '\\' && (file[1] == '?' || file[1] == '\\') && file[2] == '?' && file[3] == '\\')
++            file += 4;
++
++        required_size = sizeof(*info) + lstrlenW( file ) * sizeof(WCHAR);
+         if (required_size <= size)
+         {
+             info->writetime = font->writetime;
+             info->size.QuadPart = font->data_size;
+-            lstrcpyW( info->path, font->file );
++            lstrcpyW( info->path, file );
+             ret = TRUE;
+         }
+         else RtlSetLastWin32Error( ERROR_INSUFFICIENT_BUFFER );
+-- 
+2.43.0
