@@ -307,6 +307,9 @@ step_build() {
         exit 1
     fi
     cd "$BUILD"
+    # Remove any zero-byte files that may have been left behind by an interrupted build
+    find "$BUILD" -type f -size 0 -delete 2>/dev/null || true
+
     MAKE_ARGS=(-j"$JOBS")
     if [ -n "$LOAD" ]; then
         MAKE_ARGS+=(-l"$LOAD")
@@ -330,7 +333,7 @@ step_package() {
             exit 1
         fi
         rm -rf "$STAGE"
-        make -C "$BUILD" DESTDIR="$STAGE" install
+        make -C "$BUILD" DESTDIR="$STAGE" -j"$JOBS" install
     else
         echo "Using existing staged runner in $STAGE/opt/$PKG_BASENAME"
     fi
