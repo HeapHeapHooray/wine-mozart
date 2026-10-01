@@ -32,7 +32,7 @@ Engineered specifically for pro-audio workloads, digital audio workstations (DAW
    `build.sh` clones or updates [HeapHeapHooray/wine-d2d1-msi](https://github.com/HeapHeapHooray/wine-d2d1-msi) in real time into `.work/wine-d2d1-msi` to borrow its patch series.
 
 2. **Base Wine Tree Management**:
-   The base Wine repository (`GIANG17_REPO`) and pinned commit (`GIANG17_COMMIT`) are configured directly in `wine-mozart`'s `build.sh` (defaulting to giang17's Wine `d2d1-dcomp-11.0` @ `46c43a2db62ceeac1b33b31bccdebda65ef7f770`).
+   The base Wine repository (`GIANG17_REPO`) and pinned commit (`GIANG17_COMMIT`) are configured directly in `wine-mozart`'s `build.sh` (defaulting to giang17's Wine `d2d1-dcomp-11.0` @ `496ddf7abf6fc92644ea0cbb8f128d0336c51e25`).
 
 3. **Base Patch Application**:
    Discovers and applies all base patches (`*.mypatch` and `*.patch`) dynamically fetched from `wine-d2d1-msi` in natural version order (`sort -V`).

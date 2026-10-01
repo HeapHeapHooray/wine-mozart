@@ -16,7 +16,7 @@ PKG_BASENAME="${PKG_NAME}-${WINE_VERSION}"
 
 GIANG17_REPO="${GIANG17_REPO:-https://github.com/giang17/wine.git}"
 GIANG17_BRANCH="${GIANG17_BRANCH:-d2d1-dcomp-11.0}"
-GIANG17_COMMIT="${GIANG17_COMMIT:-46c43a2db62ceeac1b33b31bccdebda65ef7f770}"
+GIANG17_COMMIT="${GIANG17_COMMIT:-496ddf7abf6fc92644ea0cbb8f128d0336c51e25}"
 
 D2D1_MSI_REPO="${D2D1_MSI_REPO:-https://github.com/HeapHeapHooray/wine-d2d1-msi.git}"
 D2D1_MSI_BRANCH="${D2D1_MSI_BRANCH:-main}"
