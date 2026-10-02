@@ -328,16 +328,15 @@ step_package() {
     STAGE="$WORKDIR/stage"
     RUNNER_DIR="$WORKDIR/${PKG_BASENAME}-x86_64"
 
-    if [ ! -d "$STAGE/opt/$PKG_BASENAME" ]; then
-        if [ ! -f "$BUILD/Makefile" ]; then
-            echo "ERROR: Neither pre-staged directory nor build directory found." >&2
-            echo "Run build first or provide $STAGE/opt/$PKG_BASENAME." >&2
-            exit 1
-        fi
+    if [ -f "$BUILD/Makefile" ]; then
         rm -rf "$STAGE"
         make -C "$BUILD" DESTDIR="$STAGE" -j"$JOBS" install
-    else
+    elif [ -d "$STAGE/opt/$PKG_BASENAME" ]; then
         echo "Using existing staged runner in $STAGE/opt/$PKG_BASENAME"
+    else
+        echo "ERROR: Neither pre-staged directory nor build directory found." >&2
+        echo "Run build first or provide $STAGE/opt/$PKG_BASENAME." >&2
+        exit 1
     fi
 
     rm -rf "$RUNNER_DIR"
