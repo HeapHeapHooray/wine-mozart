@@ -22,6 +22,8 @@ Engineered specifically for pro-audio workloads, digital audio workstations (DAW
   - **Native Access & Kontakt 8**: Solves Wine MSI string-table database corruption during in-place InstallAware installations, and fixes `wined3d` Vulkan host-visible buffer mapping for Kontakt 8's Direct3D rendering backend.
   - **EastWest Installation Center & OPUS (including 1.6.5)**: Clean execution for library installations and high-resolution engine rendering.
   - **Heavyocity Portal**: Resolves managed installer Custom Action failures (InstallUtil / WiX error 1603) via `mscoree` CLRRuntimeInfo and `IManagedInstaller` COM fallback.
+  - **UVI Workstation**: Complete soundbank archive (`.ufs`) loading and streaming playback (e.g., UVI Grand Piano Model D) via Media Foundation and Windows Media GStreamer integration.
+  - **Soundpaint V**: High-performance instrument loading and sample playback for 8Dio's next-generation sampling engine.
 - **Synths, Modern GUIs & Plugins**:
   - **Direct2D 1.3 & DirectComposition GUIs**: Eliminates black/blank window bugs in JUCE 8, VSTGUI, and SynthEdit plugin interfaces (e.g. Pianoteq 9, Serum 2, Korg Trinity / Prophecy, EZkeys 2, Garritan CFX).
   - **OpenGL & EGL Hybrid Plugins**: Supports OpenGL child window context creation, safe cross-connection cursors, and EGL window rendering (e.g. Copycat VST3/CLAP, IK Multimedia Pianoverse).
