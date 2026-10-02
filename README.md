@@ -1,5 +1,8 @@
 # wine-mozart — The Official Wine Runner for mozart.sh
 
+> [!NOTE]
+> **Disclaimer & Upstream Attribution**: This project is essentially the brilliant work of the [giang17/wine](https://github.com/giang17/wine) repository, pinned at a specific commit and augmented with additional patches, made to be integrated into the mozart.sh project.
+
 **wine-mozart** is the official Wine runner of the **mozart.sh** project, which aims to make music production on Linux simple, reliable, and accessible.
 
 Engineered specifically for pro-audio workloads, digital audio workstations (DAWs), VST/VST3/CLAP plugins, and proprietary audio software installers, `wine-mozart` builds on top of `giang17/wine` with Direct2D 1.3 / DirectComposition support, dynamically integrates real-time patches from [HeapHeapHooray/wine-d2d1-msi](https://github.com/HeapHeapHooray/wine-d2d1-msi), and layers custom Mozart-specific optimizations to deliver an out-of-the-box Windows audio environment on Linux.
