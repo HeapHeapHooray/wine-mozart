@@ -165,11 +165,12 @@ step_deps() {
     need_deps() {
         ! command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1 || \
         ! command -v bison >/dev/null 2>&1 || \
-        ! command -v flex  >/dev/null 2>&1
+        ! command -v flex  >/dev/null 2>&1 || \
+        ! pkg-config --exists gstreamer-1.0 gstreamer-video-1.0 gstreamer-audio-1.0 gstreamer-tag-1.0 >/dev/null 2>&1
     }
 
     if need_deps; then
-        echo "Some Wine build dependencies are missing (mingw-w64, bison, flex, ...)."
+        echo "Some Wine build dependencies are missing (mingw-w64, bison, flex, gstreamer, ...)."
         if [ -t 0 ]; then
             read -r -p "Install them now with apt (uses sudo)? [y/N] " ans
         else
@@ -183,7 +184,8 @@ step_deps() {
                     libfreetype-dev libfontconfig-dev libpng-dev libjpeg-dev \
                     libgif-dev libgnutls28-dev libasound2-dev libpulse-dev \
                     libxcomposite-dev libxcursor-dev libxrandr-dev libxi-dev \
-                    libxinerama-dev libvulkan-dev libgl-dev libegl-dev
+                    libxinerama-dev libvulkan-dev libgl-dev libegl-dev \
+                    libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
                 ;;
             *) echo "Continuing anyway — the build may fail if deps are missing." ;;
         esac

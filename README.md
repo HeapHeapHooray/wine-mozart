@@ -53,7 +53,7 @@ Engineered specifically for pro-audio workloads, digital audio workstations (DAW
 ### Build Requirements
 - Linux x86_64
 - Standard C cross-compiler toolchain: `mingw-w64`, `bison`, `flex`, `autoconf`, `perl`, `gettext`
-- Vulkan and X11 development headers: `libvulkan-dev`, `libfreetype-dev`, etc.
+- Multimedia, Vulkan and X11 development headers: `libvulkan-dev`, `libfreetype-dev`, `libgstreamer1.0-dev`, `libgstreamer-plugins-base1.0-dev`, etc.
 - If dependencies are missing, `build.sh` prompts to install them automatically with `apt`.
 
 ### Building

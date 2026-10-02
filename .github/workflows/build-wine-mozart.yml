@@ -55,7 +55,8 @@ jobs:
             libfreetype-dev libfontconfig-dev libpng-dev libjpeg-dev \
             libgif-dev libgnutls28-dev libasound2-dev libpulse-dev \
             libxcomposite-dev libxcursor-dev libxrandr-dev libxi-dev \
-            libxinerama-dev libvulkan-dev libgl-dev libegl-dev
+            libxinerama-dev libvulkan-dev libgl-dev libegl-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
 
       - name: ⚡ Restore CCache
         uses: actions/cache@v4
